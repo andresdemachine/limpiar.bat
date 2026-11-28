@@ -191,6 +191,16 @@ function Get-NotaPasoLargo($paso) {
 
 # Si el espacio libre bajo durante la limpieza, por que (o $null si no bajo). Bajar no es un error: los puntos de
 # restauracion crecen mientras DISM, SFC y los instaladores cambian archivos, y las apps nuevas ocupan mas.
+# "5.07 GB -> 2.07 GB" si lo que ocupan los puntos de restauracion cambio 100 MB o mas (en cualquier direccion),
+# o $null. No se suma a "Liberado": es espacio que Windows administra, no lo borra la limpieza. Sin esta linea no
+# se entendia la diferencia: el 28/11/2026 se liberaron 4,42 GB y el espacio libre subio 6,6 GB, porque el paso 15
+# borro un punto viejo (5,07 -> 2,07 GB); el dato solo estaba en el log.
+function Get-TextoPuntos($d) {
+    if ($null -eq $d.PuntosInicio -or $null -eq $d.PuntosFin) { return $null }
+    if ([math]::Abs($d.PuntosFin - $d.PuntosInicio) -lt 100MB) { return $null }
+    return '{0} -> {1}' -f (Format-Tamano $d.PuntosInicio), (Format-Tamano $d.PuntosFin)
+}
+
 function Get-NotaEspacioBaja($d) {
     if ($d.LibreFin - $d.LibreInicio -gt -100MB) { return $null }
     $causas = @()
@@ -251,6 +261,8 @@ function Show-Resumen($d) {
     $liberadoTexto = if ($d.Total -ge 1000) { '{0:N2} GB' -f ($d.Total / 1024) } else { '{0:N0} MB' -f $d.Total }
     Write-Dato 'Liberado por la limpieza' $liberadoTexto Green
     Write-Dato 'Espacio libre en C:' ('{0:N1} -> {1:N1} GB ({2}{3:N1} GB)' -f ($d.LibreInicio / 1GB), ($d.LibreFin / 1GB), $signo, $delta)
+    $textoPuntos = Get-TextoPuntos $d
+    if ($textoPuntos) { Write-Dato 'Puntos de restauracion' $textoPuntos White }
     $notaEspacio = Get-NotaEspacioBaja $d
     if ($notaEspacio) { Write-Nota $notaEspacio Yellow }
     # Cuanto tardo (sin contar las preguntas) y si algun paso que hace siempre lo mismo tardo el triple de lo normal

@@ -70,6 +70,19 @@ Describe 'Format-Duracion' {
     }
 }
 
+Describe 'Get-TextoPuntos' {
+    It 'muestra el cambio cuando bajan (caso del 28/11/2026: el paso 15 borro un punto viejo)' {
+        Get-TextoPuntos @{ PuntosInicio = 5.07GB; PuntosFin = 2.07GB } | Should Match '^5[.,]07 GB -> 2[.,]07 GB$'
+    }
+    It 'y cuando suben' {
+        Get-TextoPuntos @{ PuntosInicio = 0; PuntosFin = 3GB } | Should Match '^0 MB -> 3[.,]00 GB$'
+    }
+    It 'nada si cambian menos de 100 MB o si no se pudieron medir' {
+        Get-TextoPuntos @{ PuntosInicio = 2GB; PuntosFin = 2.05GB } | Should BeNullOrEmpty
+        Get-TextoPuntos @{ PuntosInicio = $null; PuntosFin = 2GB } | Should BeNullOrEmpty
+    }
+}
+
 Describe 'Get-NotaEspacioBaja' {
     It 'no dice nada si el espacio libre no bajo' {
         Get-NotaEspacioBaja @{ LibreInicio = 50GB; LibreFin = 51GB } | Should BeNullOrEmpty
